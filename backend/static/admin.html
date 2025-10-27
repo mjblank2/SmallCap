@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>MicroCap Admin Curation Portal</title>
+    <style>
+        body { font-family: sans-serif; padding: 20px; }
+        .container { display: flex; }
+        #candidates { flex: 1; padding-right: 20px; }
+        #curation-form { flex: 1; border: 1px solid #ccc; padding: 15px; position: sticky; top: 20px; }
+        .candidate-item { border-bottom: 1px solid #eee; padding: 10px 0; cursor: pointer; }
+        .candidate-item:hover { background-color: #f9f9f9; }
+        input, textarea, select { width: 100%; padding: 8px; margin-bottom: 10px; box-sizing: border-box; }
+        button { padding: 10px 15px; }
+    </style>
+</head>
+<body>
+    <h1>Admin Curation Portal</h1>
+    
+    <div style="margin-bottom: 20px;">
+        <label for="admin-token">Admin Token (Simulation):</label>
+        <input type="text" id="admin-token" placeholder="Enter VALID_ADMIN_TOKEN" value="VALID_ADMIN_TOKEN" style="width: 300px;">
+        <button onclick="fetchCandidates()">Run Analysis & Refresh Candidates</button>
+    </div>
+    <hr>
+
+    <div class="container">
+        <div id="candidates">
+            <h2>Candidates (Top 10)</h2>
+            <div id="candidate-list">Waiting for refresh...</div>
+        </div>
+
+        <div id="curation-form">
+            <h2>Curation Form</h2>
+            <input type="text" id="ticker" placeholder="Ticker" readonly>
+            <input type="text" id="company_name" placeholder="Company Name">
+            
+            <label>Metrics (Auto-filled)</label>
+            <div id="metrics" style="margin-bottom: 10px; background-color: #f0f0f0; padding: 10px;"></div>
+
+            <label>Investment Thesis (The "Why")</label>
+            <textarea id="thesis" rows="10" placeholder="Detail catalysts, rationale, and risks..."></textarea>
+
+            <label>Risk Level</label>
+            <select id="risk_level">
+                <option value="Medium">Medium</option>
+                <option value="High">High</option>
+                <option value="Speculative">Speculative</option>
+            </select>
+            
+            <label>Pricing</label>
+            <input type="number" step="0.01" id="entry_price" placeholder="Entry Price">
+            <input type="number" step="0.01" id="target_price" placeholder="Target Price">
+
+            <button onclick="publishPick()">Publish Pick to App</button>
+            <p id="statusMessage"></p>
+        </div>
+    </div>
+
+    <script>
+        let candidatesData = [];
+
+        async function getAuthHeader() {
+            // CRITICAL: In a real admin portal, implement secure login.
+            const token = document.getElementById('admin-token').value;
+            return `Bearer ${token}`;
+        }
+
+        async function fetchCandidates() {
+            const listElement = document.getElementById('candidate-list');
+            listElement.innerHTML = 'Running analysis engine... (This may take time)';
+            document.getElementById('statusMessage').innerText = '';
+
+            try {
+                const response = await fetch('/api/v1/admin/candidates', {
+                    headers: { 'Authorization': await getAuthHeader() }
+                });
+
+                if (!response.ok) {
+                    const errorText = await response.text().catch(() => response.statusText);
+                    throw new Error(`API Error: ${response.status} - ${errorText}`);
+                }
+
+                candidatesData = await response.json();
+                renderCandidates();
+            } catch (error) {
+                listElement.innerHTML = `Error fetching candidates: ${error.message}`;
+            }
+        }
+
+        function renderCandidates() {
+            const listElement = document.getElementById('candidate-list');
+            listElement.innerHTML = '';
+            if (candidatesData.length === 0) {
+                listElement.innerHTML = 'No candidates found matching criteria or analysis failed.';
+                return;
+            }
+            candidatesData.forEach((candidate, index) => {
+                const item = document.createElement('div');
+                item.className = 'candidate-item';
+                // Ensure values exist before attempting to format them
+                const score = candidate.CompositeScore ? candidate.CompositeScore.toFixed(2) : 'N/A';
+                const roic = candidate.ROIC ? (candidate.ROIC * 100).toFixed(1) + '%' : 'N/A';
+                const pe = candidate.PE_Ratio ? candidate.PE_Ratio.toFixed(1) : 'N/A';
+
+                item.innerHTML = `
+                    <strong>${candidate.Ticker}</strong> (Score: ${score})
+                    <br><small>ROIC: ${roic} | P/E: ${pe}</small>
+                `;
+                item.onclick = () => selectCandidate(index);
+                listElement.appendChild(item);
+            });
+        }
+
+        function selectCandidate(index) {
+            const candidate = candidatesData[index];
+            document.getElementById('ticker').value = candidate.Ticker;
+            document.getElementById('entry_price').value = candidate.Price ? candidate.Price.toFixed(2) : 0; 
+
+            const marketCap = candidate.MarketCap ? '$' + candidate.MarketCap.toFixed(0) + 'M' : 'N/A';
+            const insider = candidate.InsiderOwnership ? (candidate.InsiderOwnership * 100).toFixed(1) + '%' : 'N/A';
+            const roic = candidate.ROIC ? (candidate.ROIC * 100).toFixed(1) + '%' : 'N/A';
+            const pe = candidate.PE_Ratio ? candidate.PE_Ratio.toFixed(1) : 'N/A';
+
+
+            const metricsElement = document.getElementById('metrics');
+            metricsElement.innerHTML = `
+                Market Cap: ${marketCap} <br>
+                Insider Ownership: ${insider} <br>
+                ROIC: ${roic} | P/E: ${pe}
+            `;
+            document.getElementById('statusMessage').innerText = '';
+        }
+
+        async function publishPick() {
+            const payload = {
+                ticker: document.getElementById('ticker').value,
+                company_name: document.getElementById('company_name').value,
+                thesis: document.getElementById('thesis').value,
+                risk_level: document.getElementById('risk_level').value,
+                entry_price: parseFloat(document.getElementById('entry_price').value),
+                target_price: parseFloat(document.getElementById('target_price').value),
+            };
+
+            if (!payload.ticker || !payload.thesis || !payload.company_name) {
+                alert('Ticker, Company Name, and Thesis are required.');
+                return;
+            }
+
+            try {
+                const response = await fetch('/api/v1/admin/publish', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'Authorization': await getAuthHeader()
+                    },
+                    body: JSON.stringify(payload)
+                });
+
+                if (response.ok) {
+                    document.getElementById('statusMessage').innerText = 'Success: Pick published!';
+                } else {
+                    const errorText = await response.text().catch(() => response.statusText);
+                    throw new Error(`Publish failed: ${response.status} - ${errorText}`);
+                }
+            } catch (error) {
+                document.getElementById('statusMessage').innerText = `Error: ${error.message}`;
+            }
+        }
+    </script>
+</body>
+</html>
