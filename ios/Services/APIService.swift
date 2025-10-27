@@ -1,54 +1,52 @@
-// ... inside APIService.swift ...
+// iOS/Services/APIService.swift (Excerpt)
 
-// Update the signature to include retryCount
-private func authenticatedRequest<T: Decodable>(path: String, method: String = "GET", body: Data? = nil, retryCount: Int = 0) async throws -> T {
+class APIService {
+    // ... (Existing properties and init) ...
     
-    // Ensure network is available before attempting request
-    guard NetworkMonitor.shared.isConnected else {
-        Log.reportError(APIError.networkIssue, context: "Network disconnected before request: \(path)")
-        throw APIError.networkIssue
+    // Initialize a specific DateFormatter for Tiingo fundamental dates (YYYY-MM-DD)
+    private let tiingoDateFormatter: DateFormatter = {
+        let formatter = DateFormatter()
+        formatter.dateFormat = "yyyy-MM-dd"
+        formatter.timeZone = TimeZone(secondsFromGMT: 0)
+        return formatter
+    }()
+
+    // Generalized request handler (Update to handle dynamic date strategies)
+    private func authenticatedRequest<T: Decodable>(path: String, method: String = "GET", body: Data? = nil, dateStrategy: JSONDecoder.DateDecodingStrategy? = nil) async throws -> T {
+        
+        // ... (Request setup, Authentication) ...
+        // Use the configured session (assuming caching setup from previous iterations)
+        let (data, response) = try await self.session.data(for: request)
+
+        // ... (Response status code handling: 401, 403, 500s) ...
+
+        // Use a local decoder instance for flexibility
+        let requestDecoder = JSONDecoder()
+        requestDecoder.keyDecodingStrategy = .convertFromSnakeCase
+        
+        // Use the specified date strategy, or default to ISO8601
+        requestDecoder.dateDecodingStrategy = dateStrategy ?? .iso8601
+
+        // Decoding (within the 200-299 case)
+        return try requestDecoder.decode(T.self, from: data)
     }
 
-    // ... (request setup remains the same) ...
+    // --- New Feature Endpoints ---
 
-    do {
-        let (data, response) = try await URLSession.shared.data(for: request)
-        guard let httpResponse = response as? HTTPURLResponse else {
-             throw APIError.networkIssue
-        }
-        
-        switch httpResponse.statusCode {
-        case 200...299:
-             // ... (decoding logic remains the same) ...
-             return // ...
-        case 401, 403:
-            // ... (auth handling remains the same) ...
-            throw // ...
-        case 500...599:
-            // Server errors might be transient. Implement retry logic (max 2 retries).
-            if retryCount < 2 {
-                Log.log("Server error \(httpResponse.statusCode). Retrying (\(retryCount + 1))...", level: .warning)
-                // Exponential backoff (wait 1 second before retrying)
-                try await Task.sleep(nanoseconds: 1_000_000_000)
-                return try await authenticatedRequest(path: path, method: method, body: body, retryCount: retryCount + 1)
-            } else {
-                Log.reportError(APIError.serverError, context: "Max retries reached for path: \(path)")
-                throw APIError.serverError
-            }
-        default:
-            Log.reportError(APIError.serverError, context: "Unexpected status code \(httpResponse.statusCode) for path: \(path)")
-            throw APIError.serverError
-        }
-    } catch let error as DecodingError {
-         Log.reportError(error, context: "Decoding failed for path: \(path)")
-         throw APIError.decodingError
-    } catch {
-        // Catch network errors (e.g., timeouts)
-        if let urlError = error as? URLError {
-             Log.reportError(urlError, context: "URLSession error for path: \(path)")
-             throw APIError.networkIssue
-        }
-        throw error // Re-throw other errors
+    func fetchAnalysisHub(ticker: String) async throws -> AnalysisHub {
+        // This endpoint contains dates in the Tiingo format within the 'fundamentalsChart' array.
+        return try await authenticatedRequest(
+            path: "analysis/hub/\(ticker)",
+            // Apply the specific formatter for this request
+            dateStrategy: .formatted(tiingoDateFormatter)
+        )
+    }
+    
+    // NEW: Securely fetch the Polygon token
+    func fetchRealtimeToken() async throws -> String {
+        struct TokenResponse: Decodable { let token: String }
+        // This request must be authenticated to ensure the user is subscribed
+        let response: TokenResponse = try await authenticatedRequest(path: "config/realtime_token")
+        return response.token
     }
 }
-// ...
