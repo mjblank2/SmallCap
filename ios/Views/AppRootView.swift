@@ -1,32 +1,83 @@
 import SwiftUI
 
-// The root view manages the application state transitions: 
-// Onboarding -> Authentication -> Main Content (Premium or Paywall)
 struct AppRootView: View {
-    // Observe the centralized services
     @StateObject private var authService = AuthService.shared
-    @StateObject private var subscriptionManager = SubscriptionManager.shared
-    @StateObject private var watchlistVM = WatchlistViewModel.shared
-    
-    // Use AppStorage (UserDefaults wrapper) for simple flags like onboarding completion
+    // ... (other StateObjects)
+    @StateObject private var networkMonitor = NetworkMonitor.shared // For Network Status
+    @Environment(\.scenePhase) private var scenePhase // For background locking
+
     @AppStorage("hasCompletedOnboarding") private var onboardingCompleted: Bool = false
 
     var body: some View {
-        Group {
-            if !onboardingCompleted {
-                // 1. Compliance Flow
-                OnboardingView(onboardingCompleted: $onboardingCompleted)
-            } else if authService.isAuthenticated {
-                // 2. Authenticated State: Check Subscription (Handled within MainTabView)
-                MainTabView()
-            } else {
-                // 3. Unauthenticated State
-                LoginView()
+        ZStack {
+            // Main Content Flow
+            Group {
+                if !onboardingCompleted {
+                    OnboardingView(onboardingCompleted: $onboardingCompleted)
+                } else if authService.isAuthenticated {
+                    // Check for Biometric Lock
+                    if authService.isAppLocked {
+                        BiometricLockView()
+                    } else {
+                        MainTabView()
+                    }
+                } else {
+                    LoginView()
+                }
+            }
+            
+            // Network Status Overlay (Robustness)
+            if !networkMonitor.isConnected {
+                VStack {
+                    HStack {
+                        Image(systemName: "wifi.exclamationmark")
+                        Text("No Internet Connection. Data may be outdated.")
+                    }
+                    .padding()
+                    .background(Color.yellow)
+                    .foregroundColor(.black)
+                    .cornerRadius(10)
+                    .padding(.top, 50) 
+                    
+                    Spacer()
+                }
+                .transition(.move(edge: .top).combined(with: .opacity))
+                .animation(.easeInOut(duration: 0.5), value: networkMonitor.isConnected)
             }
         }
-        // Inject managers into the environment for use throughout the app hierarchy
-        .environmentObject(authService)
-        .environmentObject(subscriptionManager)
-        .environmentObject(watchlistVM)
+        // ... (environmentObjects injection) ...
+        .preferredColorScheme(.dark)
+        // Handle app moving to background (Security)
+        .onChange(of: scenePhase) { newPhase in
+            if newPhase == .background || newPhase == .inactive {
+                authService.lockApp()
+            }
+        }
+        .onAppear {
+            authService.initializeBiometrics()
+        }
+    }
+}
+
+// NEW Helper View for the Lock Screen
+struct BiometricLockView: View {
+    @EnvironmentObject var authService: AuthService
+
+    var body: some View {
+        ZStack {
+            Color.backgroundMain.edgesIgnoringSafeArea(.all)
+            VStack(spacing: 20) {
+                Image(systemName: "faceid").font(.system(size: 60)).foregroundColor(.brandAccent)
+                Text("App Locked").font(StyleGuide.Typography.screenTitle)
+                Button("Unlock Now") {
+                    Task { await authService.attemptBiometricUnlock() }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.brandAccent)
+            }
+        }
+        .task {
+            await authService.attemptBiometricUnlock()
+        }
     }
 }
