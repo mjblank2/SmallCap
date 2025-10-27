@@ -1,1 +1,86 @@
+# render.yaml
+services:
+  # 1. The main Flask API (Web Service)
+  - type: web
+    name: microcap-api
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon
+    plan: standard
+    healthCheckPath: /api/v1/health
+    envVars:
+      - fromGroup: microcap-secrets
+      - key: DATABASE_URL
+        fromDatabase:
+          name: microcap-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: microcap-redis
+          property: connectionString
 
+  # 2. Background Worker (Celery) - Analysis, Alerts, Sentiment
+  - type: worker
+    name: microcap-worker
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon
+    plan: standard
+    # Command assumes Celery app is defined in backend/tasks.py as celery_app
+    startCommand: "celery -A tasks:celery_app worker --loglevel=INFO"
+    envVars:
+      - fromGroup: microcap-secrets
+      - key: DATABASE_URL
+        fromDatabase:
+          name: microcap-db
+          property: connectionString
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: microcap-redis
+          property: connectionString
+
+  # 3. Celery Beat Scheduler
+  - type: worker
+    name: microcap-scheduler
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    region: oregon
+    plan: starter
+    startCommand: "celery -A tasks:celery_app beat --loglevel=INFO"
+    envVars:
+      - fromGroup: microcap-secrets
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: microcap-redis
+          property: connectionString
+
+# 4. Production Database (PostgreSQL)
+databases:
+  - name: microcap-db
+    region: oregon
+    plan: standard
+
+# 5. Redis (Task Queue Broker)
+  - type: redis
+    name: microcap-redis
+    region: oregon
+    plan: starter
+    maxmemoryPolicy: noeviction
+
+# Shared Secrets Group (Configure values securely in the Render Dashboard)
+envVarGroups:
+  - name: microcap-secrets
+    envVars:
+      - key: POLYGON_API_KEY
+        sync: false
+      - key: TIINGO_API_KEY
+        sync: false
+      - key: SSRV_WEBHOOK_SECRET
+        sync: false
+      # Add Firebase credentials/secrets here
