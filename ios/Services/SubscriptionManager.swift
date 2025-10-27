@@ -1,46 +1,128 @@
 import Foundation
 import StoreKit
 import Combine
+// In production: Import RevenueCat SDK (Install via Swift Package Manager)
+// import RevenueCat
 
-// Manages In-App Purchases (IAP) and subscription state. 
-// Implementing this correctly is complex; using a service like RevenueCat is highly recommended for SSRV.
 class SubscriptionManager: ObservableObject {
     static let shared = SubscriptionManager()
     
-    // The central source of truth for subscription status
     @Published var isPremiumUser: Bool = false
-    // Prices MUST be fetched dynamically from StoreKit (App Store Guideline 3.1.1)
     @Published var premiumProductPrice: String = "Loading..."
+    
+    // private var premiumPackage: Package? // RevenueCat Package type
 
-    // Called on launch and after login/purchase
-    func verifySubscriptionStatus() async {
-        // CRITICAL: In production, this relies entirely on Server-Side Receipt Validation (SSRV).
-        // The backend must verify the StoreKit receipt directly with Apple's servers.
+    // Initialization (Call this on App Launch - AppDelegate or main App struct)
+    func configure() {
+        // In production:
+        /*
+        // CRITICAL: Replace with your Public API key from RevenueCat Dashboard
+        Purchases.configure(withAPIKey: "YOUR_REVENUECAT_PUBLIC_API_KEY")
+        // Set the delegate to handle real-time updates
+        Purchases.shared.delegate = self
+        */
+        print("RevenueCat Initialized (Simulated)")
+        Task { await fetchProductDetails() }
+    }
+    
+    // Called after AuthService confirms login
+    func identifyUser(userId: String) async {
+        // In production:
+        /*
+        do {
+            // Log in to RevenueCat with the unique user ID (e.g., Firebase UID)
+            let (customerInfo, created) = try await Purchases.shared.logIn(userId)
+            updateSubscriptionStatus(from: customerInfo)
+        } catch {
+            Log.reportError(error, context: "RevenueCat Login Failed")
+        }
+        */
+        print("RevenueCat User Identified: \(userId) (Simulated)")
+        updateSubscriptionStatus(from: nil) // Simulate update
+    }
 
-        // SIMULATION: We assume premium if the user is authenticated in this simulation.
-        // This allows testing the premium UI flow, as the backend middleware handles the check.
-        let isPremium = AuthService.shared.isAuthenticated
+    // Called on logout
+    func logoutUser() async {
+        // In production: try? await Purchases.shared.logOut()
+        DispatchQueue.main.async { self.isPremiumUser = false }
+    }
+
+    // Centralized status update (The source of truth)
+    private func updateSubscriptionStatus(from customerInfo: Any? /* CustomerInfo */) {
+        // In production:
+        /*
+        // "premium_access" must match the Entitlement ID configured in RevenueCat Dashboard
+        let isActive = customerInfo?.entitlements["premium_access"]?.isActive == true
+        DispatchQueue.main.async {
+            self.isPremiumUser = isActive
+        }
+        */
         
+        // SIMULATION: Grant premium for development if the user is authenticated
+        let isActive = AuthService.shared.isAuthenticated
         DispatchQueue.main.async {
-            self.isPremiumUser = isPremium
+            self.isPremiumUser = isActive
         }
     }
-    
-    // Fetches product details from Apple
+
+    // Fetching Products (Dynamic Pricing)
     func fetchProductDetails() async {
-        // In production: Use StoreKit 2 (async/await) to fetch localized pricing and product details.
-        print("Fetching StoreKit product details (Simulated)...")
-        DispatchQueue.main.async {
-            // Simulated price
-            self.premiumProductPrice = "$49.99/mo"
+        // In production:
+        /*
+        do {
+            // Fetch offerings configured in the RevenueCat dashboard
+            let offerings = try await Purchases.shared.offerings()
+            if let package = offerings.current?.availablePackages.first {
+                self.premiumPackage = package
+                DispatchQueue.main.async {
+                    self.premiumProductPrice = package.storeProduct.localizedPriceString
+                }
+            }
+        } catch {
+            Log.reportError(error, context: "RevenueCat Fetch Products Failed")
         }
+        */
+        DispatchQueue.main.async { self.premiumProductPrice = "$49.99/mo (Simulated)" }
     }
     
-    // Placeholders for StoreKit actions
-    func purchasePremium() async { 
-        print("StoreKit Purchase Initiated (Implement StoreKit 2 logic)...") 
+    // Purchasing
+    func purchasePremium() async {
+        // In production:
+        /*
+        guard let package = premiumPackage else { return }
+        do {
+            let result = try await Purchases.shared.purchase(package: package)
+            if !result.userCancelled {
+                // Status will be updated automatically via the delegate
+            }
+        } catch {
+            Log.reportError(error, context: "RevenueCat Purchase Failed")
+        }
+        */
+         print("RevenueCat Purchase Initiated (Simulated)...")
     }
-    func restorePurchases() async { 
-        print("StoreKit Restore Initiated (Implement StoreKit 2 logic)...") 
+    
+    // Restoring (Required by Apple)
+    func restorePurchases() async {
+        // In production:
+        /*
+        do {
+            let customerInfo = try await Purchases.shared.restorePurchases()
+            // Status updates automatically via the delegate
+        } catch {
+             Log.reportError(error, context: "RevenueCat Restore Failed")
+        }
+        */
+        print("RevenueCat Restore Initiated (Simulated)...")
     }
 }
+
+// In production: Implement the PurchasesDelegate for real-time updates
+/*
+extension SubscriptionManager: PurchasesDelegate {
+    // Called whenever RevenueCat detects a change in subscription status
+    func purchases(_ purchases: Purchases, receivedUpdated customerInfo: CustomerInfo) {
+        self.updateSubscriptionStatus(from: customerInfo)
+    }
+}
+*/
