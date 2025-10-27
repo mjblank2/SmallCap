@@ -1,57 +1,76 @@
 import SwiftUI
-import Charts // Import Swift Charts
 
 struct IdeaDetailView: View {
     let idea: StockIdea
     @EnvironmentObject private var watchlistVM: WatchlistViewModel
+    // State for the confirmation overlay
+    @State private var showWatchlistConfirmation = false
 
     var body: some View {
-        List {
-            // NEW: Charting Section
-            Section(header: Text("Historical Performance (Simulated)")) {
-                // In production: Fetch historical price data from your API
-                let historicalData = fetchSimulatedChartData() 
-                
-                Chart(historicalData) { point in
-                    LineMark(
-                        x: .value("Date", point.date),
-                        y: .value("Price", point.price)
-                    )
-                    .foregroundStyle(Color.accentColor)
-                }
-                .frame(height: 200)
-                .chartYAxis {
-                    AxisMarks(format: .currency(code: "USD"))
+        ZStack {
+            Color.backgroundMain.edgesIgnoringSafeArea(.all)
+            
+            List {
+                // ... (Existing Sections using StyleGuide) ...
+            }
+            .listStyle(InsetGroupedListStyle())
+            .scrollContentBackground(.hidden) // Ensure background color shows through
+            .navigationTitle(idea.ticker)
+            .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    watchlistButton()
                 }
             }
-
-            // ... (Existing Sections: Overview, Thesis, Signals, Disclaimer) ...
             
+            // Confirmation Overlay (Delight/Feedback)
+            if showWatchlistConfirmation {
+                SuccessOverlayView(message: watchlistVM.isWatching(idea.ticker) ? "Added to Watchlist" : "Removed")
+                    // Smooth transition in and out
+                    .transition(.opacity.animation(.easeInOut(duration: 0.3)))
+            }
         }
-        .listStyle(InsetGroupedListStyle())
-        .navigationTitle(idea.ticker)
-        // ... (Toolbar code) ...
-        .onAppear {
-            // Track user engagement
-            Analytics.track(.ideaViewed, properties: ["ticker": idea.ticker])
+    }
+    
+    @ViewBuilder
+    private func watchlistButton() -> some View {
+        Button(action: {
+            Task {
+                // Perform the action
+                await watchlistVM.toggleWatchlist(ticker: idea.ticker)
+                // Provide immediate positive feedback
+                Haptics.notifySuccess()
+                
+                // Show the overlay and hide it after a delay
+                showWatchlistConfirmation = true
+                DispatchQueue.main.asyncAfter(deadline: .now() + 1.5) {
+                    showWatchlistConfirmation = false
+                }
+            }
+        }) {
+            Image(systemName: watchlistVM.isWatching(idea.ticker) ? "star.fill" : "star")
+                .foregroundColor(.yellow)
+                // Subtle "bounce" animation on tap
+                .scaleEffect(showWatchlistConfirmation ? 1.2 : 1.0)
+                .animation(.spring(response: 0.3, dampingFraction: 0.5), value: showWatchlistConfirmation)
         }
     }
 }
 
-// Helper structures for charting (Move these to a separate file if reused)
-struct PricePoint: Identifiable {
-    let id = UUID()
-    let date: Date
-    let price: Double
-}
-
-func fetchSimulatedChartData() -> [PricePoint] {
-    // Simulated data generation
-    var data: [PricePoint] = []
-    for i in 0..<30 {
-        let date = Calendar.current.date(byAdding: .day, value: -i, to: Date())!
-        let price = 10.0 + Double(i) * 0.2 + Double.random(in: -1...1)
-        data.append(PricePoint(date: date, price: price))
+// NEW Helper View: SuccessOverlayView (HUD/Toast)
+struct SuccessOverlayView: View {
+    let message: String
+    
+    var body: some View {
+        VStack {
+            Image(systemName: "checkmark.circle.fill")
+                .font(.system(size: 60))
+                .foregroundColor(.brandPositive)
+            Text(message)
+                .font(StyleGuide.Typography.headline)
+        }
+        .padding(40)
+        .background(Color.backgroundCard.opacity(0.95))
+        .cornerRadius(20)
+        .shadow(radius: 20)
     }
-    return data.reversed()
 }
