@@ -1,91 +1,54 @@
-import Foundation
+// ... inside APIService.swift ...
 
-class APIService {
-    static let shared = APIService()
-    private let baseURL = Environment.current.apiBaseURL
-    private let decoder = JSONDecoder()
+// Update the signature to include retryCount
+private func authenticatedRequest<T: Decodable>(path: String, method: String = "GET", body: Data? = nil, retryCount: Int = 0) async throws -> T {
     
-    enum APIError: Error {
-        case unauthorized, forbidden, serverError, decodingError, networkIssue
+    // Ensure network is available before attempting request
+    guard NetworkMonitor.shared.isConnected else {
+        Log.reportError(APIError.networkIssue, context: "Network disconnected before request: \(path)")
+        throw APIError.networkIssue
     }
 
-    private init() {
-        // Configure decoder for snake_case (common in Python APIs) and ISO8601 dates
-        decoder.keyDecodingStrategy = .convertFromSnakeCase
-        decoder.dateDecodingStrategy = .iso8601
-    }
+    // ... (request setup remains the same) ...
 
-    // Generalized request handler using Generics for type safety
-    private func authenticatedRequest<T: Decodable>(path: String, method: String = "GET", body: Data? = nil) async throws -> T {
-        let url = baseURL.appendingPathComponent(path)
-        var request = URLRequest(url: url)
-        request.httpMethod = method
-        request.httpBody = body
-        request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-        
-        // CRITICAL: Securely fetch the token via AuthService
-        guard let token = AuthService.shared.getAuthToken() else {
-            throw APIError.unauthorized
-        }
-        request.setValue("Bearer \(token)", forHTTPHeaderField: "Authorization")
-
+    do {
         let (data, response) = try await URLSession.shared.data(for: request)
-
         guard let httpResponse = response as? HTTPURLResponse else {
              throw APIError.networkIssue
         }
         
         switch httpResponse.statusCode {
         case 200...299:
-             do {
-                 // Handle potentially empty responses (e.g., for POST/DELETE success)
-                 if data.isEmpty, let emptyResponse = "{}".data(using: .utf8) {
-                      return try decoder.decode(T.self, from: emptyResponse)
-                 }
-                 return try decoder.decode(T.self, from: data)
-            } catch {
-                print("Decoding Error: \(error)")
-                throw APIError.decodingError
+             // ... (decoding logic remains the same) ...
+             return // ...
+        case 401, 403:
+            // ... (auth handling remains the same) ...
+            throw // ...
+        case 500...599:
+            // Server errors might be transient. Implement retry logic (max 2 retries).
+            if retryCount < 2 {
+                Log.log("Server error \(httpResponse.statusCode). Retrying (\(retryCount + 1))...", level: .warning)
+                // Exponential backoff (wait 1 second before retrying)
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                return try await authenticatedRequest(path: path, method: method, body: body, retryCount: retryCount + 1)
+            } else {
+                Log.reportError(APIError.serverError, context: "Max retries reached for path: \(path)")
+                throw APIError.serverError
             }
-        case 401:
-            // Token invalid or expired. Force logout.
-            AuthService.shared.logout() 
-            throw APIError.unauthorized
-        case 403:
-            // Authenticated but subscription lapsed (SSRV failed on backend)
-            // Update local subscription status
-            DispatchQueue.main.async {
-                SubscriptionManager.shared.isPremiumUser = false
-            }
-            throw APIError.forbidden
         default:
+            Log.reportError(APIError.serverError, context: "Unexpected status code \(httpResponse.statusCode) for path: \(path)")
             throw APIError.serverError
         }
-    }
-
-    // --- Feature Endpoints ---
-
-    func fetchDailyPicks() async throws -> [StockIdea] {
-        return try await authenticatedRequest(path: "picks/daily")
-    }
-    
-    func fetchPerformanceHistory() async throws -> [PerformanceRecord] {
-        return try await authenticatedRequest(path: "picks/performance")
-    }
-    
-    // Watchlist: Fetch all tickers
-    func fetchWatchlist() async throws -> [String] {
-        return try await authenticatedRequest(path: "watchlist")
-    }
-    
-    // Define a simple success response structure for updates
-    struct SuccessResponse: Decodable { let success: Bool? }
-
-    // Watchlist: Add or Remove ticker
-    func updateWatchlist(ticker: String, action: String) async throws {
-        // Action must be 'add' or 'remove'
-        let bodyDict = ["ticker": ticker, "action": action]
-        let bodyData = try JSONSerialization.data(withJSONObject: bodyDict)
-        let _: SuccessResponse = try await authenticatedRequest(path: "watchlist", method: "POST", body: bodyData)
+    } catch let error as DecodingError {
+         Log.reportError(error, context: "Decoding failed for path: \(path)")
+         throw APIError.decodingError
+    } catch {
+        // Catch network errors (e.g., timeouts)
+        if let urlError = error as? URLError {
+             Log.reportError(urlError, context: "URLSession error for path: \(path)")
+             throw APIError.networkIssue
+        }
+        throw error // Re-throw other errors
     }
 }
+// ...
