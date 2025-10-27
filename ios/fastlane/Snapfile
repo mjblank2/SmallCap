@@ -1,1 +1,22 @@
+# ios/fastlane/Snapfile
 
+# Devices required by App Store Connect (as of 2024/2025 standards)
+devices([
+  "iPhone 15 Pro Max", # 6.7 inch display
+  # "iPhone 14 Pro Max", # Fallback if 15 Pro Max is unavailable on CI
+  "iPhone 8 Plus",     # 5.5 inch display
+  "iPad Pro (12.9-inch) (6th generation)" # 12.9 inch iPad
+])
+
+# Supported languages
+languages([
+  "en-US"
+])
+
+# Output directory (relative to the Fastfile location)
+output_directory("./fastlane/screenshots")
+
+# Clear previous screenshots
+clear_previous_screenshots(true)
+
+# The scheme is passed via the CI/CD configuration (codemagic.yaml)
