@@ -1,32 +1,62 @@
 import SwiftUI
+import UIKit // Import UIKit for Haptics
 
 struct StyleGuide {
-    // MARK: - Color Palette (Dark Mode First)
-    // For production, define these in Assets.xcassets.
+    // MARK: - Color Palette (Trust & Professionalism)
     struct ColorPalette {
-        // Accent: Vibrant Emerald (Growth, Action)
-        static let accent = Color(red: 10/255, green: 190/255, blue: 135/255)
-        // Backgrounds (Near Black for high contrast and reduced eye strain)
+        // Accent: Trustworthy Blue (Calm, Stability)
+        static let accent = Color(red: 60/255, green: 145/255, blue: 230/255)
+        
+        // Semantic Colors
+        static let positive = Color(red: 40/255, green: 200/255, blue: 120/255) // Green for Gains
+        static let negative = Color.red
+        
+        // Backgrounds (Deep, near-black for focus)
         static let backgroundMain = Color(red: 18/255, green: 20/255, blue: 28/255)
         static let backgroundCard = Color(red: 30/255, green: 33/255, blue: 45/255)
+        
         // Text
         static let textPrimary = Color.white
-        static let textSecondary = Color.gray
+        static let textSecondary = Color(red: 180/255, green: 180/255, blue: 190/255)
     }
     
-    // MARK: - Typography (Using rounded design for modern appeal)
+    // MARK: - Typography (Clarity and Friendliness)
     struct Typography {
-        static let title = Font.system(size: 24, weight: .bold, design: .rounded)
-        static let cardTitle = Font.system(size: 22, weight: .bold, design: .rounded)
-        static let headline = Font.system(size: 17, weight: .semibold, design: .default)
-        static let body = Font.system(size: 16, weight: .regular, design: .default)
-        static let caption = Font.system(size: 12, weight: .medium, design: .default)
+        // Using rounded design for a modern, friendly feel.
+        static let screenTitle = Font.system(.largeTitle, design: .rounded).weight(.bold)
+        static let sectionTitle = Font.system(size: 24, design: .rounded).weight(.bold)
+        static let cardTitle = Font.system(size: 22, design: .rounded).weight(.bold)
+        static let headline = Font.system(size: 17, design: .default).weight(.semibold)
+        static let body = Font.system(size: 16, design: .default).weight(.regular)
+        static let caption = Font.system(size: 12, design: .default).weight(.medium)
     }
 }
 
 // Extension for easy access
 extension Color {
     static let brandAccent = StyleGuide.ColorPalette.accent
+    static let brandPositive = StyleGuide.ColorPalette.positive
     static let backgroundMain = StyleGuide.ColorPalette.backgroundMain
     static let backgroundCard = StyleGuide.ColorPalette.backgroundCard
+    static let textPrimary = StyleGuide.ColorPalette.textPrimary
+    static let textSecondary = StyleGuide.ColorPalette.textSecondary
 }
+
+// MARK: - Haptics Manager (Delight and Feedback)
+class HapticsManager {
+    static let shared = HapticsManager()
+    
+    func impactLight() {
+        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+    }
+    
+    func notifySuccess() {
+        UINotificationFeedbackGenerator().notificationOccurred(.success)
+    }
+    
+    func notifyWarning() {
+        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+    }
+}
+// Convenience wrapper
+var Haptics = HapticsManager.shared
