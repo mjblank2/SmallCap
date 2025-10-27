@@ -1,1 +1,79 @@
+# codemagic.yaml
+environment:
+  # CRITICAL: Configure these securely in the Codemagic Dashboard Environment Groups.
+  groups:
+    - app_store_connect
+    - certificates
+    - general # Ensure BUNDLE_ID is set here
+  vars:
+    # Update these to match your Xcode project structure (Assuming root paths)
+    XCODE_WORKSPACE: "ios/MicroCapDaily.xcworkspace"
+    XCODE_SCHEME: "MicroCapDaily"
+    UITEST_SCHEME: "MicroCapDailyUITests"
+  # Specify Ruby version for Fastlane stability
+  ruby: 3.1.2
 
+workflows:
+  release-workflow:
+    name: iOS Build, Screenshots, and TestFlight Deployment
+    instance_type: mac_mini_m1
+    xcode: latest
+    
+    triggering:
+      events:
+        - push
+      branch_patterns:
+        - pattern: 'main'
+          include: true
+
+    scripts:
+      # --- Setup and Signing ---
+      - name: Initialize Keychain
+        script: keychain initialize
+        
+      - name: Fetch signing files
+        script: | 
+          app-store-connect fetch-signing-files $BUNDLE_ID --type IOS_APP_STORE --create
+          
+      - name: Add certificates to Keychain
+        script: keychain add-certificates
+        
+      - name: Install Dependencies (SPM)
+        script: xcode-project use-spm
+
+      # --- Automated Screenshot Generation (Fastlane Snapshot) ---
+      - name: Install Fastlane (via Bundler)
+        script: |
+          # Navigate to the directory containing the Gemfile
+          cd ios
+          gem install bundler
+          bundle install
+
+      - name: Generate App Store Screenshots
+        script: |
+          cd ios
+          # Runs XCUITests defined in the project and captures screenshots
+          # The scheme is passed directly to the snapshot command.
+          bundle exec fastlane snapshot --scheme $UITEST_SCHEME
+        # Continue build even if screenshots fail (optional, useful during initial setup)
+        ignore_failure: true
+
+      # --- Build the App ---
+      - name: Build the app for App Store
+        script: | 
+          xcode-project build-ipa \
+            --workspace $XCODE_WORKSPACE \
+            --scheme $XCODE_SCHEME
+            
+    artifacts:
+      - build/ios/ipa/*.ipa
+      # Collect the generated screenshots from the ios/fastlane directory
+      - ios/fastlane/screenshots/**/*.png
+      
+    publishing:
+      app_store_connect:
+        auth: api_key
+        # 1. Submit the build to TestFlight
+        submit_to_testflight: true
+        # 2. Upload the generated screenshots automatically
+        submit_screenshots: true
