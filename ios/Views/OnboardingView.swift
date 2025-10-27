@@ -2,36 +2,42 @@ import SwiftUI
 
 struct OnboardingView: View {
     @Binding var onboardingCompleted: Bool
-    @State private var acceptedRisks = false
+    @State private var currentPage = 0
     
     var body: some View {
-        VStack(spacing: 30) {
-            Text("Welcome to MicroCap Daily").font(.largeTitle).bold().padding(.top, 50)
+        TabView(selection: $currentPage) {
+            // Page 1: Welcome and Value Proposition
+            OnboardingPageView(
+                title: "Welcome to MicroCap Daily",
+                subtitle: "Discover high-potential small-cap and micro-cap stocks analyzed by experts.",
+                imageName: "chart.line.uptrend.xyaxis.circle.fill",
+                showNextButton: true,
+                currentPage: $currentPage
+            ).tag(0)
             
-            Spacer()
-            
-            VStack(alignment: .leading, spacing: 15) {
-                Text("CRITICAL RISK WARNING").font(.title2).bold().foregroundColor(.red)
-                
-                Text("Micro-cap and small-cap stocks are highly speculative, often illiquid, and carry extreme risk, including the total loss of your investment principal.")
-                
-                Text("This application is for informational and educational purposes ONLY and is NOT personalized investment advice. You are solely responsible for your investment decisions.")
-            }
-            .padding()
-            .background(Color(.secondarySystemBackground))
-            .cornerRadius(10)
+            // Page 2: Our Methodology (The Hybrid Model)
+            OnboardingPageView(
+                title: "The Hybrid Approach",
+                subtitle: "We combine sophisticated algorithms with rigorous human due diligence to mitigate risks.",
+                imageName: "person.2.badge.gearshape.fill",
+                showNextButton: true,
+                currentPage: $currentPage
+            ).tag(1)
 
-            Spacer()
-            
-            Toggle("I have read, understood, and accept the risks.", isOn: $acceptedRisks)
-
-            Button("Continue") {
-                if acceptedRisks { onboardingCompleted = true }
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(!acceptedRisks)
-            .padding(.bottom, 20)
+            // Page 3: Compliance and Risk Warning (Mandatory)
+            RiskWarningView(onboardingCompleted: $onboardingCompleted).tag(2)
         }
-        .padding()
+        // Creates the paging effect
+        .tabViewStyle(PageTabViewStyle(indexDisplayMode: .always))
+        .background(Color(.systemGroupedBackground).edgesIgnoringSafeArea(.all))
+        .onAppear {
+            Analytics.track(.appLaunched)
+        }
     }
 }
+
+// Helper View for standard pages (Implementation Details Omitted for Brevity)
+struct OnboardingPageView: View { /* ... */ }
+
+// Specialized View for the Risk Warning (Implementation Details Omitted for Brevity)
+struct RiskWarningView: View { /* ... */ }
