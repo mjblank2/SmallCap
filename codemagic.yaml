@@ -6,7 +6,7 @@ environment:
     - certificates
     - general # Ensure BUNDLE_ID is set here
   vars:
-    # Update these to match your Xcode project structure (Assuming root paths)
+    # Update these to match your actual Xcode project names
     XCODE_WORKSPACE: "ios/MicroCapDaily.xcworkspace"
     XCODE_SCHEME: "MicroCapDaily"
     UITEST_SCHEME: "MicroCapDailyUITests"
@@ -53,9 +53,8 @@ workflows:
         script: |
           cd ios
           # Runs XCUITests defined in the project and captures screenshots
-          # The scheme is passed directly to the snapshot command.
           bundle exec fastlane snapshot --scheme $UITEST_SCHEME
-        # Continue build even if screenshots fail (optional, useful during initial setup)
+        # Continue build even if screenshots fail (optional)
         ignore_failure: true
 
       # --- Build the App ---
@@ -67,13 +66,11 @@ workflows:
             
     artifacts:
       - build/ios/ipa/*.ipa
-      # Collect the generated screenshots from the ios/fastlane directory
+      # Collect the generated screenshots
       - ios/fastlane/screenshots/**/*.png
       
     publishing:
       app_store_connect:
         auth: api_key
-        # 1. Submit the build to TestFlight
         submit_to_testflight: true
-        # 2. Upload the generated screenshots automatically
         submit_screenshots: true
