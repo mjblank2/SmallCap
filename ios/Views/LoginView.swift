@@ -8,41 +8,72 @@ struct LoginView: View {
     @EnvironmentObject var authService: AuthService
     
     var body: some View {
-        VStack(spacing: 20) {
-            Text("Sign In").font(.largeTitle)
+        ZStack {
+            Color.backgroundMain.edgesIgnoringSafeArea(.all)
             
-            TextField("Email Address", text: $email)
-                .keyboardType(.emailAddress).autocapitalization(.none)
-                .textFieldStyle(RoundedBorderTextFieldStyle()).padding(.horizontal)
-            
-            // Password field omitted as the simulation relies only on email
-            
-            if let errorMessage = errorMessage {
-                Text(errorMessage).foregroundColor(.red).font(.footnote)
-            }
-
-            Button("Login (Simulated)") {
-                Task {
-                    isLoading = true
-                    errorMessage = nil
-                    // If successful, AuthService updates its state, and AppRootView updates the UI.
-                    let success = await authService.login(email: email)
-                    if !success {
-                        errorMessage = "Login failed. Check credentials and backend status."
-                    }
-                    isLoading = false
+            VStack(spacing: 20) {
+                Spacer()
+                
+                Image(systemName: "chart.line.uptrend.xyaxis")
+                    .font(.system(size: 60))
+                    .foregroundColor(.brandAccent)
+                
+                Text("MicroCap Daily")
+                    .font(StyleGuide.Typography.screenTitle)
+                    .foregroundColor(.textPrimary)
+                
+                TextField("Email Address", text: $email)
+                    .keyboardType(.emailAddress).autocapitalization(.none)
+                    .textFieldStyle(RoundedBorderTextFieldStyle())
+                    .padding(.horizontal)
+                    .tint(.brandAccent)
+                
+                // Password field omitted as the simulation relies only on email
+                
+                if let errorMessage = errorMessage {
+                    Text(errorMessage).foregroundColor(.red).font(.footnote)
                 }
-            }
-            .buttonStyle(.borderedProminent)
-            .disabled(isLoading || email.isEmpty)
-            
-            if isLoading { ProgressView() }
 
-            Text("For testing use: 'user@example.com' or 'admin@example.com'.").font(.footnote).foregroundColor(.secondary).padding(.top, 20)
-            
-            // CRITICAL: App Store requires "Sign in with Apple" if other third-party logins are used.
-            Text("Sign in with Apple integration required here for production.").font(.caption).foregroundColor(.gray)
+                Button(action: { Task { await performLogin() } }) {
+                    HStack {
+                        Spacer()
+                        if isLoading {
+                            ProgressView().tint(.white)
+                        } else {
+                            Text("Login (Simulated)")
+                        }
+                        Spacer()
+                    }
+                }
+                .buttonStyle(.borderedProminent)
+                .tint(.brandAccent)
+                .padding(.horizontal)
+                .disabled(isLoading || email.isEmpty)
+                
+                Text("For testing use: 'user@example.com' or 'admin@example.com'.")
+                    .font(.footnote).foregroundColor(.secondary).padding(.top, 20)
+                
+                Spacer()
+                
+                // CRITICAL: App Store requires "Sign in with Apple"
+                Text("Sign in with Apple integration required here for production.")
+                    .font(.caption).foregroundColor(.gray)
+                    .padding(.bottom)
+            }
+            .padding()
         }
-        .padding()
+    }
+    
+    func performLogin() async {
+        isLoading = true
+        errorMessage = nil
+        // If successful, AuthService updates its state, and AppRootView updates the UI.
+        let success = await authService.login(email: email)
+        if !success {
+            errorMessage = "Login failed. Check credentials and backend status."
+            Haptics.notifyWarning()
+        }
+        // isLoading is set to false implicitly by AuthService state change
     }
 }
+
