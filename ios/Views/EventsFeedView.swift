@@ -26,7 +26,9 @@ struct EventsFeedView: View {
             }
             .navigationTitle("Catalyst Feed")
             .task {
-                await viewModel.loadEvents()
+                if viewModel.events.isEmpty {
+                    await viewModel.loadEvents()
+                }
             }
         }
     }
