@@ -1,4 +1,9 @@
 # render.yaml
+# Infrastructure blueprint for deployment on Render.com
+
+# ----------------------------------------------------------------
+# All Services (API, Workers, Redis) must be under the 'services:' key.
+# ----------------------------------------------------------------
 services:
   # 1. The main Flask API (Web Service)
   - type: web
@@ -11,6 +16,7 @@ services:
     healthCheckPath: /api/v1/health
     envVars:
       - fromGroup: microcap-secrets
+      # Link Database and Redis automatically
       - key: DATABASE_URL
         fromDatabase:
           name: microcap-db
@@ -21,7 +27,7 @@ services:
           name: microcap-redis
           property: connectionString
 
-  # 2. Background Worker (Celery) - Analysis, Alerts, Sentiment
+  # 2. Background Worker (Celery)
   - type: worker
     name: microcap-worker
     env: docker
@@ -29,7 +35,7 @@ services:
     dockerContext: ./backend
     region: oregon
     plan: standard
-    # Command assumes Celery app is defined in backend/tasks.py as celery_app
+    # Command to start the Celery worker (Assumes Celery app is in backend/tasks.py)
     startCommand: "celery -A tasks:celery_app worker --loglevel=INFO"
     envVars:
       - fromGroup: microcap-secrets
@@ -60,20 +66,28 @@ services:
           name: microcap-redis
           property: connectionString
 
-# 4. Production Database (PostgreSQL)
-databases:
-  - name: microcap-db
-    region: oregon
-    plan: standard
-
-# 5. Redis (Task Queue Broker)
+  # 4. Redis (Task Queue Broker) - Must be defined as a service
   - type: redis
     name: microcap-redis
     region: oregon
     plan: starter
+    # maxmemoryPolicy defines how Redis behaves when memory is full. 'noeviction' is standard for brokers.
     maxmemoryPolicy: noeviction
+    # ipAllowList is required for Redis services; Render manages this automatically for internal connections.
+    ipAllowList: [] 
 
+# ----------------------------------------------------------------
+# PostgreSQL Databases are defined under the 'databases:' key.
+# ----------------------------------------------------------------
+databases:
+  # 5. Production Database (PostgreSQL)
+  - name: microcap-db
+    region: oregon
+    plan: standard
+
+# ----------------------------------------------------------------
 # Shared Secrets Group (Configure values securely in the Render Dashboard)
+# ----------------------------------------------------------------
 envVarGroups:
   - name: microcap-secrets
     envVars:
