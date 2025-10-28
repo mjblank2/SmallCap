@@ -1,6 +1,7 @@
 FROM python:3.11-slim
 WORKDIR /app
 
+# Optimize Python execution
 ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
@@ -26,7 +27,13 @@ RUN apt-get remove -y build-essential wget gcc && apt-get autoremove -y && apt-g
 # Install NLTK data required for VADER sentiment analysis
 RUN python -m nltk.downloader vader_lexicon
 
+# Copy application code and the entrypoint script
 COPY . /app
+
+# Ensure the entrypoint script is executable
+RUN chmod +x /app/entrypoint.sh
+
 EXPOSE 8000
-# Default command for Render Web Service (Workers override this via render.yaml)
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+
+# Set the command to execute the entrypoint script
+CMD ["/app/entrypoint.sh"]
