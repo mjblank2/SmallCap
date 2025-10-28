@@ -32,6 +32,9 @@ struct StyleGuide {
 }
 
 // Extensions for easy access (Used throughout the SwiftUI views)
+// Note: These are duplicates of the extensions in ios/Design/StyleGuide.swift
+// It's best to have only one StyleGuide file.
+/*
 extension Color {
     static let brandAccent = StyleGuide.ColorPalette.accent
     static let brandPositive = StyleGuide.ColorPalette.positive
@@ -40,3 +43,4 @@ extension Color {
     static let textPrimary = StyleGuide.ColorPalette.textPrimary
     static let textSecondary = StyleGuide.ColorPalette.textSecondary
 }
+*/
