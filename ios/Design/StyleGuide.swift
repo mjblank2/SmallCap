@@ -46,16 +46,24 @@ extension Color {
 class HapticsManager {
     static let shared = HapticsManager()
     
+    private init() {}
+    
     func impactLight() {
-        UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        DispatchQueue.main.async {
+            UIImpactFeedbackGenerator(style: .light).impactOccurred()
+        }
     }
     
     func notifySuccess() {
-        UINotificationFeedbackGenerator().notificationOccurred(.success)
+        DispatchQueue.main.async {
+            UINotificationFeedbackGenerator().notificationOccurred(.success)
+        }
     }
     
     func notifyWarning() {
-        UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        DispatchQueue.main.async {
+            UINotificationFeedbackGenerator().notificationOccurred(.warning)
+        }
     }
 }
 // Convenience wrapper
