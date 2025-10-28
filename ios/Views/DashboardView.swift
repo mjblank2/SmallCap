@@ -32,7 +32,24 @@ struct DashboardView: View {
                             await refreshData()
                         }
                     case .error(let message):
-                        Text("Error: \(message)").foregroundColor(.red)
+                        VStack(spacing: 20) {
+                            Image(systemName: "exclamationmark.triangle.fill")
+                                .font(.system(size: 40))
+                                .foregroundColor(.red)
+                            Text("Failed to Load Picks")
+                                .font(StyleGuide.Typography.headline)
+                            Text(message)
+                                .font(StyleGuide.Typography.body)
+                                .foregroundColor(.textSecondary)
+                                .multilineTextAlignment(.center)
+                                .padding(.horizontal)
+                            Button("Retry") {
+                                Task { await refreshData() }
+                            }
+                            .buttonStyle(.bordered)
+                            .tint(.brandAccent)
+                        }
+                        .padding()
                     }
                 }
             }
@@ -93,7 +110,23 @@ struct DashboardView: View {
     }
 }
 
-// Helper Views (Implementations based on previous iterations adopting the new StyleGuide)
+// Helper Views
+
+struct SummarySnapshotView: View {
+    let watchlistCount: Int
+    
+    var body: some View {
+        HStack(spacing: 20) {
+            MetricPill(title: "Market", value: "S&P 500", color: .brandPositive, valuePrefix: "+0.45%")
+                .layoutPriority(1)
+            MetricPill(title: "Watchlist", value: "\(watchlistCount) Stocks", color: .brandAccent)
+                .layoutPriority(1)
+            MetricPill(title: "Catalysts", value: "3 Today", color: .orange)
+                .layoutPriority(1)
+        }
+        .frame(maxWidth: .infinity)
+    }
+}
 
 // Example: IdeaCardView (Refined)
 struct IdeaCardView: View {
@@ -118,21 +151,21 @@ struct IdeaCardView: View {
             
             Text(idea.companyName).foregroundColor(.textSecondary)
             
-            // NEW: Brief snippet of the thesis for immediate context
+            // Brief snippet of the thesis for immediate context
             Text(idea.thesis)
                 .font(StyleGuide.Typography.body).foregroundColor(.textPrimary)
                 .lineLimit(2).truncationMode(.tail)
 
             Divider().background(Color.gray.opacity(0.5))
 
-            // Key Metrics Row (Using Semantic Green for targets)
+            // Key Metrics Row
             HStack {
-                MetricPill(title: "Entry", value: String(format: "$%.2f", idea.entryPrice ?? 0))
+                MetricPill(title: "Entry", value: idea.entryPrice, format: .currency(code: "USD"))
                 Spacer()
-                MetricPill(title: "Target", value: String(format: "$%.2f", idea.targetPrice ?? 0), color: .brandPositive)
+                MetricPill(title: "Target", value: idea.targetPrice, format: .currency(code: "USD"), color: .brandPositive)
                 Spacer()
                 if let upside = idea.potentialUpside {
-                    MetricPill(title: "Upside", value: String(format: "%.0f%%", upside * 100), color: .brandPositive)
+                    MetricPill(title: "Upside", value: upside, format: .percent.precision(.fractionLength(0)), color: .brandPositive)
                 }
             }
         }
@@ -166,5 +199,42 @@ struct EmptyStateCard: View {
         .frame(maxWidth: .infinity)
         .background(Color.backgroundCard)
         .cornerRadius(15)
+    }
+}
+
+// Generic Metric Pill
+struct MetricPill<V: FormatStyle>: View where V.FormatInput: Numeric, V.FormatOutput == String {
+    let title: String
+    let value: V.FormatInput?
+    var format: V
+    var color: Color = .textPrimary
+    var valuePrefix: String = ""
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(title)
+                .font(StyleGuide.Typography.caption)
+                .foregroundColor(.textSecondary)
+            if let value = value {
+                Text(valuePrefix + (format.format(value)))
+                    .font(StyleGuide.Typography.headline)
+                    .foregroundColor(color)
+            } else {
+                Text("N/A")
+                    .font(StyleGuide.Typography.headline)
+                    .foregroundColor(.textSecondary)
+            }
+        }
+    }
+}
+
+// Overload for non-numeric values
+extension MetricPill where V == FloatingPointFormatStyle<Double> {
+    init(title: String, value: String, color: Color = .textPrimary, valuePrefix: String = "") {
+        self.title = title
+        self.value = nil
+        self.format = .number // Dummy format
+        self.color = color
+        self.valuePrefix = valuePrefix + value
     }
 }
