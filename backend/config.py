@@ -10,6 +10,7 @@ class Config:
     
     # Database Configuration (Handles Render's format for SQLAlchemy)
     DATABASE_URI = os.environ.get("DATABASE_URL", "sqlite:///microcap_engine.db")
+    # Render uses 'postgres://', SQLAlchemy requires 'postgresql://'
     if DATABASE_URI and DATABASE_URI.startswith("postgres://"):
         DATABASE_URI = DATABASE_URI.replace("postgres://", "postgresql://", 1)
         
