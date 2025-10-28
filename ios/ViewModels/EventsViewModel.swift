@@ -15,8 +15,7 @@ class EventsViewModel: ObservableObject {
             // Sort by date descending
             self.events = fetchedEvents.sorted(by: { $0.date > $1.date })
         } catch {
-            // In production: Use LoggerService to report the error
-            print("Failed to load events feed: \(error)")
+            Log.reportError(error, context: "Failed to load events feed")
             // Handle error state (e.g., show an alert or empty state message)
         }
     }
