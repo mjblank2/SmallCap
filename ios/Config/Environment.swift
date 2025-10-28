@@ -14,7 +14,7 @@ enum Environment {
             // Local testing against the Python backend
             case .development: return URL(string: "http://127.0.0.1:5001/api/v1")!
             // Real deployed backend (HTTPS required by Apple's App Transport Security)
-            case .production: return URL(string: "https://api.yourdomain.com/api/v1")!
+            case .production: return URL(string: "https://your-render-app-name.onrender.com/api/v1")!
             }
         }
     }
