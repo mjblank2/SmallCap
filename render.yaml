@@ -1,9 +1,4 @@
 # render.yaml
-# Infrastructure blueprint for deployment on Render.com
-
-# ----------------------------------------------------------------
-# All Services (API, Workers, Redis) must be under the 'services:' key.
-# ----------------------------------------------------------------
 services:
   # 1. The main Flask API (Web Service)
   - type: web
@@ -15,8 +10,9 @@ services:
     plan: standard
     healthCheckPath: /api/v1/health
     envVars:
+      - key: SERVICE_ROLE
+        value: WEB
       - fromGroup: microcap-secrets
-      # Link Database and Redis automatically
       - key: DATABASE_URL
         fromDatabase:
           name: microcap-db
@@ -35,9 +31,9 @@ services:
     dockerContext: ./backend
     region: oregon
     plan: standard
-    # Command to start the Celery worker (Assumes Celery app is in backend/tasks.py)
-    startCommand: "celery -A tasks:celery_app worker --loglevel=INFO"
     envVars:
+      - key: SERVICE_ROLE
+        value: WORKER
       - fromGroup: microcap-secrets
       - key: DATABASE_URL
         fromDatabase:
@@ -57,8 +53,9 @@ services:
     dockerContext: ./backend
     region: oregon
     plan: starter
-    startCommand: "celery -A tasks:celery_app beat --loglevel=INFO"
     envVars:
+      - key: SERVICE_ROLE
+        value: SCHEDULER
       - fromGroup: microcap-secrets
       - key: REDIS_URL
         fromService:
@@ -66,28 +63,21 @@ services:
           name: microcap-redis
           property: connectionString
 
-  # 4. Redis (Task Queue Broker) - Must be defined as a service
+  # 4. Redis (Task Queue Broker)
   - type: redis
     name: microcap-redis
     region: oregon
     plan: starter
-    # maxmemoryPolicy defines how Redis behaves when memory is full. 'noeviction' is standard for brokers.
     maxmemoryPolicy: noeviction
-    # ipAllowList is required for Redis services; Render manages this automatically for internal connections.
     ipAllowList: [] 
 
-# ----------------------------------------------------------------
-# PostgreSQL Databases are defined under the 'databases:' key.
-# ----------------------------------------------------------------
+# 5. Production Database (PostgreSQL)
 databases:
-  # 5. Production Database (PostgreSQL)
   - name: microcap-db
     region: oregon
     plan: standard
 
-# ----------------------------------------------------------------
 # Shared Secrets Group (Configure values securely in the Render Dashboard)
-# ----------------------------------------------------------------
 envVarGroups:
   - name: microcap-secrets
     envVars:
@@ -97,4 +87,3 @@ envVarGroups:
         sync: false
       - key: SSRV_WEBHOOK_SECRET
         sync: false
-      # Add Firebase credentials/secrets here
