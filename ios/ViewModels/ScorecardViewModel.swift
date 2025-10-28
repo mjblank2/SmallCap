@@ -19,7 +19,7 @@ class ScorecardViewModel: ObservableObject {
             self.history = records.sorted(by: { $0.publicationDate ?? Date.distantPast > $1.publicationDate ?? Date.distantPast })
             calculateMetrics(records: records)
         } catch {
-            print("Error loading history: \(error)")
+            Log.reportError(error, context: "Error loading scorecard history")
             // Handle error state (e.g., display an alert)
         }
     }
