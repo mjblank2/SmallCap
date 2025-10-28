@@ -9,6 +9,8 @@ struct AnalysisHub: Codable {
     let liquidity: LiquidityScore
     let sentiment: NewsSentiment
     let fundamentalsChart: [FinancialDataPoint]
+    let technicals: TechnicalAnalysis
+    let ownership: InstitutionalOwnership
 }
 
 // Sub-Models for specific features:
@@ -79,7 +81,39 @@ struct NewsSentiment: Codable {
 // 5. Fundamental Visualization
 struct FinancialDataPoint: Codable, Identifiable {
     var id: String { date }
-    let date: Date // Requires specific DateFormatter
+    let date: Date // Requires specific DateFormatter (YYYY-MM-DD)
     let revenue: Double
     let netIncome: Double
+}
+
+// 6. Technical Analysis
+struct TechnicalAnalysis: Codable {
+    let trend: String?
+    let indicators: [String: Double?]?
+    let signals: [TechnicalSignal]?
+    let error: String?
+}
+
+struct TechnicalSignal: Codable, Hashable {
+    let signal: String
+    let sentiment: String
+    let description: String
+}
+
+// 7. Institutional Ownership
+struct InstitutionalOwnership: Codable {
+    let topHolders: [Holder]?
+    let concentration: Double?
+}
+
+struct Holder: Codable, Hashable {
+    let name: String
+    let valueHeld: Double
+    let changeInShares: Double
+    
+    enum CodingKeys: String, CodingKey {
+        case name
+        case valueHeld = "value_held"
+        case changeInShares = "change_in_shares"
+    }
 }
