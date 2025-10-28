@@ -21,7 +21,7 @@ class SubscriptionManager: ObservableObject {
         // Set the delegate to handle real-time updates
         Purchases.shared.delegate = self
         */
-        print("RevenueCat Initialized (Simulated)")
+        Log.log("RevenueCat Initialized (Simulated)", level: .info)
         Task { await fetchProductDetails() }
     }
     
@@ -37,7 +37,7 @@ class SubscriptionManager: ObservableObject {
             Log.reportError(error, context: "RevenueCat Login Failed")
         }
         */
-        print("RevenueCat User Identified: \(userId) (Simulated)")
+        Log.log("RevenueCat User Identified: \(userId) (Simulated)", level: .info)
         updateSubscriptionStatus(from: nil) // Simulate update
     }
 
@@ -45,6 +45,7 @@ class SubscriptionManager: ObservableObject {
     func logoutUser() async {
         // In production: try? await Purchases.shared.logOut()
         DispatchQueue.main.async { self.isPremiumUser = false }
+        Log.log("RevenueCat User Logged Out (Simulated)", level: .info)
     }
 
     // Centralized status update (The source of truth)
@@ -58,7 +59,8 @@ class SubscriptionManager: ObservableObject {
         }
         */
         
-        // SIMULATION: Grant premium for development if the user is authenticated
+        // --- SIMULATION ---
+        // Grant premium for development if the user is authenticated
         let isActive = AuthService.shared.isAuthenticated
         DispatchQueue.main.async {
             self.isPremiumUser = isActive
@@ -99,7 +101,7 @@ class SubscriptionManager: ObservableObject {
             Log.reportError(error, context: "RevenueCat Purchase Failed")
         }
         */
-         print("RevenueCat Purchase Initiated (Simulated)...")
+         Log.log("RevenueCat Purchase Initiated (Simulated)...", level: .info)
     }
     
     // Restoring (Required by Apple)
@@ -113,7 +115,7 @@ class SubscriptionManager: ObservableObject {
              Log.reportError(error, context: "RevenueCat Restore Failed")
         }
         */
-        print("RevenueCat Restore Initiated (Simulated)...")
+        Log.log("RevenueCat Restore Initiated (Simulated)...", level: .info)
     }
 }
 
@@ -126,3 +128,4 @@ extension SubscriptionManager: PurchasesDelegate {
     }
 }
 */
+
