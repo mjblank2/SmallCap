@@ -23,7 +23,7 @@ struct RedFlagEngineView: View {
             }
             
             // Detailed Breakdown
-            if let details = analysis.details {
+            if let details = analysis.details, !details.isEmpty {
                 ForEach(details) { detail in
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
@@ -44,6 +44,10 @@ struct RedFlagEngineView: View {
                         Divider().background(Color.gray.opacity(0.5))
                     }
                 }
+            } else if analysis.error == nil {
+                Text("No significant red flags detected.")
+                    .font(StyleGuide.Typography.body)
+                    .foregroundColor(.textSecondary)
             }
         }
     }
