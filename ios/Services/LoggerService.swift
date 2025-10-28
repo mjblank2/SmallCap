@@ -1,29 +1,106 @@
-import Foundation
-// In production: import Sentry or import FirebaseCrashlytics
+import SwiftUI
 
-class LoggerService {
-    static let shared = LoggerService()
+struct SettingsView: View {
+    @EnvironmentObject var authService: AuthService
+    @StateObject private var subscriptionManager = SubscriptionManager.shared
     
-    enum LogLevel: String {
-        case info, warning, error, debug
-    }
-    
-    func log(_ message: String, level: LogLevel = .debug, file: String = #file, line: Int = #line) {
-        let fileName = (file as NSString).lastPathComponent
-        let logOutput = "[\(level.rawValue.uppercased())] \(fileName):\(line) - \(message)"
-        
-        #if DEBUG
-        print(logOutput)
-        #endif
-        
-        // In production: Send critical logs to centralized platform (e.g., Sentry.capture(message: logOutput))
-    }
-    
-    func reportError(_ error: Error, context: String? = nil) {
-        let errorMessage = "Non-fatal Error Reported: \(error.localizedDescription). Context: \(context ?? "N/A")"
-        log(errorMessage, level: .error)
-        // In production: E.g., Crashlytics.crashlytics().record(error: error)
+    @State private var showingDeleteAlert = false
+    @State private var isDeletingAccount = false
+
+    var body: some View {
+        NavigationStack {
+            ZStack {
+                 Color.backgroundMain.edgesIgnoringSafeArea(.all)
+                
+                List {
+                    // Subscription Section
+                    Section(header: Text("Subscription").foregroundColor(.textSecondary)) {
+                        HStack {
+                            Text("Status")
+                            Spacer()
+                            Text(subscriptionManager.isPremiumUser ? "Premium" : "Free")
+                                .foregroundColor(subscriptionManager.isPremiumUser ? .brandPositive : .textSecondary)
+                        }
+                        Button("Manage Subscription") {
+                            // Implement logic to open App Store subscription management
+                        }
+                        Button("Restore Purchases") {
+                            Task { await subscriptionManager.restorePurchases() }
+                        }
+                    }
+                    .listRowBackground(Color.backgroundCard)
+
+                    // Security Section (Biometrics)
+                    Section(header: Text("Security").foregroundColor(.textSecondary)) {
+                        Toggle(isOn: Binding(
+                            get: { authService.isBiometricsEnabled },
+                            set: { authService.setBiometricsEnabled($0) }
+                        )) {
+                            Label("Use Face ID / Touch ID", systemImage: "faceid")
+                        }
+                        .tint(.brandAccent)
+                    }
+                    .listRowBackground(Color.backgroundCard)
+
+                    // ... (Legal Section - Ensure links are finalized) ...
+                    Section(header: Text("Legal").foregroundColor(.textSecondary)) {
+                         Button("Terms of Service") { /* Open URL */ }
+                         Button("Privacy Policy") { /* Open URL */ }
+                    }
+                    .listRowBackground(Color.backgroundCard)
+
+
+                    // Account Management
+                    Section(header: Text("Account").foregroundColor(.textSecondary)) {
+                        Button("Log Out") {
+                            Haptics.impactLight()
+                            authService.logout()
+                        }
+                        
+                        // CRITICAL: Account Deletion (Gap 2 Fix)
+                        Button("Delete Account") {
+                            Haptics.notifyWarning()
+                            showingDeleteAlert = true
+                        }
+                        .foregroundColor(.red)
+                    }
+                    .listRowBackground(Color.backgroundCard)
+                }
+                .listStyle(InsetGroupedListStyle())
+                .scrollContentBackground(.hidden)
+                .disabled(isDeletingAccount)
+                
+                if isDeletingAccount {
+                    Color.black.opacity(0.4).edgesIgnoringSafeArea(.all)
+                    ProgressView("Deleting Account...").tint(.white)
+                }
+            }
+            .navigationTitle("Settings")
+            // Confirmation Alert for Deletion (Mandatory Safety Feature)
+            .alert("Confirm Account Deletion", isPresented: $showingDeleteAlert) {
+                Button("Delete Forever", role: .destructive) {
+                    // --- GAP 2 Fix ---
+                    Task {
+                        isDeletingAccount = true
+                        do {
+                            try await APIService.shared.deleteAccount()
+                            Log.log("Account deletion successful. Logging out.", level: .info)
+                            Haptics.notifySuccess()
+                            // Log out after deletion completes
+                            authService.logout()
+                        } catch {
+                            Log.reportError(error, context: "Account deletion failed")
+                            Haptics.notifyWarning()
+                            // Show another alert informing user of failure
+                        }
+                        isDeletingAccount = false
+                    }
+                    // --- End Fix ---
+                }
+                Button("Cancel", role: .cancel) {}
+            } message: {
+                Text("This action cannot be undone. All your data, watchlist, and subscription status will be permanently deleted.")
+            }
+        }
     }
 }
-// Convenience wrapper
-var Log = LoggerService.shared
