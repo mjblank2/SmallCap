@@ -5,36 +5,46 @@ struct ScorecardView: View {
     
     var body: some View {
         NavigationStack {
-            List {
-                // Dashboard Header (KPIs)
-                Section(header: Text("Overall Performance")) {
-                    HStack {
-                        MetricView(title: "Avg. Return", value: String(format: "%.2f%%", viewModel.averageReturn), color: viewModel.averageReturn >= 0 ? .green : .red)
-                        Spacer()
-                        MetricView(title: "Win Rate", value: String(format: "%.0f%%", viewModel.winRate * 100))
-                    }
-                }
+            ZStack {
+                Color.backgroundMain.edgesIgnoringSafeArea(.all)
                 
-                // Historical Picks List
-                Section(header: Text("Track Record")) {
-                    if viewModel.isLoading && viewModel.history.isEmpty {
-                        ProgressView()
-                    } else if viewModel.history.isEmpty {
-                        Text("No performance history available yet.").foregroundColor(.secondary)
-                    } else {
-                        ForEach(viewModel.history) { record in
-                            PerformanceRow(record: record)
+                List {
+                    // Dashboard Header (KPIs)
+                    Section(header: SectionHeaderView(title: "Overall Performance")) {
+                        HStack(spacing: 20) {
+                            MetricView(title: "Avg. Return", value: String(format: "%.2f%%", viewModel.averageReturn), color: viewModel.averageReturn >= 0 ? .brandPositive : .red)
+                            Spacer()
+                            MetricView(title: "Win Rate", value: String(format: "%.0f%%", viewModel.winRate * 100))
+                        }
+                        .padding(.vertical, 8)
+                    }
+                    .listRowBackground(Color.backgroundCard)
+                    
+                    // Historical Picks List
+                    Section(header: SectionHeaderView(title: "Track Record")) {
+                        if viewModel.isLoading && viewModel.history.isEmpty {
+                            ProgressView().tint(.brandAccent)
+                        } else if viewModel.history.isEmpty {
+                            Text("No performance history available yet.").foregroundColor(.secondary)
+                        } else {
+                            ForEach(viewModel.history) { record in
+                                PerformanceRow(record: record)
+                            }
                         }
                     }
+                    .listRowBackground(Color.backgroundCard)
                 }
-            }
-            .listStyle(InsetGroupedListStyle())
-            .navigationTitle("Scorecard")
-            .task {
-                await viewModel.loadHistory()
-            }
-            .refreshable {
-                 await viewModel.loadHistory()
+                .listStyle(InsetGroupedListStyle())
+                .scrollContentBackground(.hidden)
+                .navigationTitle("Scorecard")
+                .task {
+                    if viewModel.history.isEmpty {
+                        await viewModel.loadHistory()
+                    }
+                }
+                .refreshable {
+                     await viewModel.loadHistory()
+                }
             }
         }
     }
@@ -44,11 +54,11 @@ struct ScorecardView: View {
 struct MetricView: View {
     let title: String
     let value: String
-    var color: Color = .primary
+    var color: Color = .textPrimary
     
     var body: some View {
         VStack(alignment: .leading) {
-            Text(title).font(.headline).foregroundColor(.secondary)
+            Text(title).font(.headline).foregroundColor(.textSecondary)
             Text(value).font(.title2).fontWeight(.bold).foregroundColor(color)
         }
     }
@@ -67,7 +77,7 @@ struct PerformanceRow: View {
             if let pct = record.returnPct {
                 Text(String(format: "%.2f%%", pct))
                     .fontWeight(.semibold)
-                    .foregroundColor(pct >= 0 ? .green : .red)
+                    .foregroundColor(pct >= 0 ? .brandPositive : .red)
             }
         }
     }
