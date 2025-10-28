@@ -1,5 +1,4 @@
 from data_providers import DP
-import pandas as pd
 try:
     import talib
 except ImportError:
@@ -50,14 +49,22 @@ class AnalysisFeatures:
         signals = []
         current_price = df['Close'].iloc[-1]
         current_rsi = rsi.iloc[-1]
-        trend = "Neutral" # Default trend
+        trend = "Neutral"  # Default trend
         
         # Pattern Recognition: Golden Cross / Death Cross
         if len(df) >= 200:
             if sma_50.iloc[-1] > sma_200.iloc[-1] and sma_50.iloc[-2] <= sma_200.iloc[-2]:
-                signals.append({"signal": "Golden Cross", "sentiment": "Bullish", "description": "Strong bullish signal: 50-day SMA crossed above 200-day SMA."})
+                signals.append({
+                    "signal": "Golden Cross",
+                    "sentiment": "Bullish",
+                    "description": "Strong bullish signal: 50-day SMA crossed above 200-day SMA.",
+                })
             elif sma_50.iloc[-1] < sma_200.iloc[-1] and sma_50.iloc[-2] >= sma_200.iloc[-2]:
-                signals.append({"signal": "Death Cross", "sentiment": "Bearish", "description": "Strong bearish signal: 50-day SMA crossed below 200-day SMA."})
+                signals.append({
+                    "signal": "Death Cross",
+                    "sentiment": "Bearish",
+                    "description": "Strong bearish signal: 50-day SMA crossed below 200-day SMA.",
+                })
             
             # Trend Strength
             if current_price > sma_50.iloc[-1] and sma_50.iloc[-1] > sma_200.iloc[-1]:
@@ -71,9 +78,17 @@ class AnalysisFeatures:
 
         # Momentum Signals (RSI)
         if current_rsi > 70:
-             signals.append({"signal": "Overbought", "sentiment": "Bearish", "description": "RSI_14 is over 70, indicating a potential pullback."})
+            signals.append({
+                "signal": "Overbought",
+                "sentiment": "Bearish",
+                "description": "RSI_14 is over 70, indicating a potential pullback.",
+            })
         elif current_rsi < 30:
-             signals.append({"signal": "Oversold", "sentiment": "Bullish", "description": "RSI_14 is under 30, indicating a potential bounce."})
+            signals.append({
+                "signal": "Oversold",
+                "sentiment": "Bullish",
+                "description": "RSI_14 is under 30, indicating a potential bounce.",
+            })
 
 
         return {

@@ -1,24 +1,23 @@
+from contextlib import contextmanager
+from datetime import datetime
+import enum
+
 from sqlalchemy import create_engine, Column, Integer, String, Boolean, DateTime, Text, Float, ForeignKey, Enum
 from sqlalchemy.orm import declarative_base, sessionmaker, relationship
+
 from config import Config
-import enum
-from datetime import datetime
 
 Base = declarative_base()
 engine = create_engine(Config.DATABASE_URI)
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
+@contextmanager
 def get_db_session():
-    """
-    Provides a scoped database session.
-    Recommended: Use this in a 'with' block or ensure 'db.close()' is called.
-    """
+    """Context manager that yields a SQLAlchemy session and ensures it is closed."""
     db = SessionLocal()
     try:
-        # Yield the session to be used by the caller
         yield db
     finally:
-        # Always close the session when done
         db.close()
 
 class User(Base):
