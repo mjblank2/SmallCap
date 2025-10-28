@@ -14,6 +14,7 @@ class NetworkMonitor: ObservableObject {
         monitor.pathUpdateHandler = { [weak self] path in
             DispatchQueue.main.async {
                 let status = (path.status == .satisfied)
+                // Only publish if the status changes
                 if status != self?.isConnected {
                     Log.log("Network status changed: \(status ? "Connected" : "Disconnected")", level: .info)
                     self?.isConnected = status
