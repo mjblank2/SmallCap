@@ -3,8 +3,8 @@ import Foundation
 struct PreviewData {
     // Idealized data for Dashboard
     static let idealPicks: [StockIdea] = [
-        StockIdea(id: UUID(), ticker: "ACME", companyName: "Acme Dynamics", thesis: "Strong catalysts...", riskLevel: .Medium, entryPrice: 5.50, targetPrice: 12.00, publicationDate: Date(), convictionScore: 8.8, convictionClassification: "High Conviction"),
-        StockIdea(id: UUID(), ticker: "BETA", companyName: "Beta BioInnovators", thesis: "Speculative play...", riskLevel: .Speculative, entryPrice: 1.10, targetPrice: 5.00, publicationDate: Date(), convictionScore: 7.2, convictionClassification: "Strong Opportunity")
+        StockIdea(id: UUID(), ticker: "ACME", companyName: "Acme Dynamics", thesis: "Strong catalysts...", riskLevel: .Medium, entryPrice: 5.50, targetPrice: 12.00, publicationDate: Date(), convictionScore: 8.8, convictionClassification: "High Conviction", aiSummary: "• AI Summary bullet point 1\n• AI Summary bullet point 2"),
+        StockIdea(id: UUID(), ticker: "BETA", companyName: "Beta BioInnovators", thesis: "Speculative play...", riskLevel: .Speculative, entryPrice: 1.10, targetPrice: 5.00, publicationDate: Date(), convictionScore: 7.2, convictionClassification: "Strong Opportunity", aiSummary: "• AI Summary bullet point 1")
     ]
     
     // Idealized data for Detail View
