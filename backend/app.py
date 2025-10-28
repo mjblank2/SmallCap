@@ -1,10 +1,11 @@
 import sentry_sdk
 from flask import Flask, jsonify, request, abort
+from functools import wraps
+
 from analysis_features import AF
+from data_providers import DP
 from models import get_db_session, SectorPerformance, PriceAlert, User, DeviceToken
 from config import Config
-from functools import wraps
-import pandas as pd
 
 # Import the analyzer for the admin route (Gap 3)
 from analysis_engine import MicroCapAnalyzer
@@ -43,8 +44,8 @@ def require_auth(f):
                 request.user_uid = "admin_user_uid" # Simulated admin
                 request.is_admin = True
             elif auth_header == "Bearer VALID_USER_TOKEN":
-                 request.user_uid = "simulated_user_uid" # Simulated user
-                 request.is_admin = False
+                request.user_uid = "simulated_user_uid"  # Simulated user
+                request.is_admin = False
             else:
                 raise Exception("Invalid Token")
             # --- End Simulation ---
@@ -106,7 +107,7 @@ def get_sector_heatmap():
 @require_auth 
 def publish_curated_pick():
     if not getattr(request, 'is_admin', False):
-         abort(403, description="Admin privileges required")
+        abort(403, description="Admin privileges required")
          
     data = request.json
     ticker = data.get('ticker')
@@ -199,7 +200,7 @@ def delete_account():
 @require_auth
 def get_admin_candidates():
     if not getattr(request, 'is_admin', False):
-         abort(403, description="Admin privileges required")
+        abort(403, description="Admin privileges required")
          
     try:
         analyzer = MicroCapAnalyzer()
