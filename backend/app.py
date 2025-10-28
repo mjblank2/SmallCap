@@ -8,7 +8,12 @@ from config import Config
 
 app = Flask(__name__)
 app.config.from_object(Config)
-
+@app.route('/api/v1/health', methods=['GET'])
+def health_check():
+    """
+    Health check endpoint for Render to confirm the service is live.
+    """
+    return jsonify({"status": "healthy"}), 200
 # (Health Check, SSRV Webhook endpoints omitted for brevity)
 
 # Internal helper to fetch the hub data
