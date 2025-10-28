@@ -1,3 +1,24 @@
+"""
+Push notification service with APNs client integration.
+
+Compatibility Note
+------------------
+`apns2` depends on `hyper`, and older versions of `hyper` try to import
+abstract base classes like `Iterable` and `Mapping` directly from the
+collections module. In Python 3.10+, those names live in collections.abc.
+This shim adds these attributes back into collections if they are missing.
+"""
+
+from __future__ import annotations
+
+import collections
+import collections.abc
+
+# Backwards-compatibility shim
+for _name in ("Iterable", "Mapping", "MutableMapping", "MutableSet", "MutableSequence", "Sequence", "Set"):
+    if not hasattr(collections, _name):
+        setattr(collections, _name, getattr(collections.abc, _name))
+
 import os
 from apns2.client import APNsClient
 from apns2.payload import Payload
