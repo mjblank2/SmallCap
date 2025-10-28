@@ -16,13 +16,14 @@ class AnalysisViewModel: ObservableObject {
     func loadAnalysis() async {
         isLoading = true
         errorMessage = nil
-        defer { isLoading = false }
+        // defer { isLoading = false } // Defer causes flicker, set manually
         
         do {
             self.analysisHub = try await APIService.shared.fetchAnalysisHub(ticker: ticker)
         } catch {
-            print("Error loading Analysis Hub: \(error)")
+            Log.reportError(error, context: "Error loading Analysis Hub for \(ticker)")
             self.errorMessage = "Failed to load detailed analysis. Please check the backend integration."
         }
+        isLoading = false
     }
 }
