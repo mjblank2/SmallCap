@@ -9,6 +9,9 @@ class AnalyticsManager {
         case loginSuccess = "Login_Success"
         case paywallViewed = "Paywall_Viewed"
         case ideaViewed = "Idea_Viewed"
+        // --- NEW EVENTS ---
+        case portfolioItemAdded = "Portfolio_Item_Added"
+        case commentPosted = "Comment_Posted"
     }
     
     func track(_ event: Event, properties: [String: Any]? = nil) {
