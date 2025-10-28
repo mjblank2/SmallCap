@@ -13,3 +13,4 @@ vaderSentiment>=3.3
 TA-Lib>=0.4.19
 apns2>=0.7.0
 sentry-sdk[flask]>=1.40.0
+google-generativeai>=0.4.0
