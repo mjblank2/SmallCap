@@ -2,12 +2,12 @@
 # Stop the script if any command fails
 set -e
 
-# Check the SERVICE_ROLE environment variable set by Render
+# Check the SERVICE_ROLE environment variable set by Render via render.yaml
 case "$SERVICE_ROLE" in
   "WEB")
     echo "Starting Web API (Gunicorn)..."
     # Render provides $PORT automatically for web services.
-    # 'exec' ensures the command replaces the script process, allowing signals to be handled correctly.
+    # 'exec' ensures the command replaces the script process.
     exec gunicorn --bind 0.0.0.0:$PORT app:app
     ;;
   "WORKER")
