@@ -12,8 +12,9 @@ struct NotificationPrimerView: View {
 
             Text("Stay Ahead of the Market")
                 .font(StyleGuide.Typography.sectionTitle)
+                .foregroundColor(.textPrimary)
 
-            Text("Enable notifications to receive instant alerts when new micro-cap ideas are published.")
+            Text("Enable notifications to receive instant alerts when new micro-cap ideas are published or price targets are hit.")
                 .foregroundColor(.textSecondary)
                 .multilineTextAlignment(.center)
 
@@ -30,10 +31,12 @@ struct NotificationPrimerView: View {
                 Haptics.impactLight()
                 dismiss()
             }
+            .tint(.textSecondary)
         }
         .padding(30)
         .background(Color.backgroundCard)
         .cornerRadius(20)
         .padding()
+        .preferredColorScheme(.dark)
     }
 }
