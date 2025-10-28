@@ -9,6 +9,7 @@ struct InsiderActivityView: View {
         let formatter = NumberFormatter()
         formatter.numberStyle = .currency
         formatter.maximumFractionDigits = 0
+        formatter.notation = .compactName
         return formatter
     }
     
