@@ -17,8 +17,9 @@ class PicksViewModel: ObservableObject {
             self.ideas = fetchedIdeas
             self.state = .loaded
         } catch {
+            Log.reportError(error, context: "loadPicks failed")
             // Provide user-friendly error messages
-            self.state = .error("Failed to load picks. Ensure the backend server is running and you are logged in. Error: \(error.localizedDescription)")
+            self.state = .error("Failed to load picks. Error: \(error.localizedDescription)")
         }
     }
 }
