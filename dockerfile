@@ -5,6 +5,10 @@ ENV PYTHONUNBUFFERED 1
 ENV PYTHONDONTWRITEBYTECODE 1
 
 COPY requirements.txt /app/
+# Copy application code and the entrypoint script
+COPY . /app
+# NEW: Ensure the entrypoint script is executable within the container
+RUN chmod +x /app/entrypoint.sh
 
 # Install system dependencies required for compiling libraries (TA-Lib and psycopg2)
 RUN apt-get update && apt-get install -y build-essential wget gcc libpq-dev
@@ -29,4 +33,4 @@ RUN python -m nltk.downloader vader_lexicon
 COPY . /app
 EXPOSE 8000
 # Default command for Render Web Service (Workers override this via render.yaml)
-CMD ["gunicorn", "--bind", "0.0.0.0:$PORT", "app:app"]
+CMD ["/app/entrypoint.sh"]
