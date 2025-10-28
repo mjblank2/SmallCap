@@ -4,7 +4,9 @@ import Security
 // CRITICAL: Securely stores authentication tokens. Never use UserDefaults for tokens.
 class KeychainHelper {
     static let shared = KeychainHelper()
-    private let service = "com.yourapp.microcap.auth"
+    private let service = "com.yourapp.microcap.auth" // Ensure this matches your app's bundle ID prefix
+
+    private init() {}
 
     func save(token: String, account: String) {
         guard let data = token.data(using: .utf8) else { return }
