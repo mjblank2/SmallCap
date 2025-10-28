@@ -3,6 +3,8 @@ import Combine
 
 class RealTimeService: ObservableObject {
     static let shared = RealTimeService()
+    
+    // Published properties for UI
     @Published var livePrices: [String: Double] = [:]
     @Published var connectionStatus: ConnectionStatus = .disconnected
     
@@ -10,6 +12,7 @@ class RealTimeService: ObservableObject {
 
     private var webSocketTask: URLSessionWebSocketTask?
     private var polygonToken: String?
+    private var activeSubscriptions = Set<String>()
     
     // Connect is async as it requires the secure token first
     func connect() async {
@@ -21,7 +24,7 @@ class RealTimeService: ObservableObject {
             // This ensures only subscribed users access the token.
             self.polygonToken = try await APIService.shared.fetchRealtimeToken()
         } catch {
-            print("Security Check Failed: Cannot fetch Real-Time Token. \(error)")
+            Log.reportError(error, context: "Security Check Failed: Cannot fetch Real-Time Token")
             DispatchQueue.main.async { self.connectionStatus = .failed }
             return
         }
@@ -39,7 +42,9 @@ class RealTimeService: ObservableObject {
     func disconnect() {
         webSocketTask?.cancel(with: .goingAway, reason: nil)
         webSocketTask = nil
+        activeSubscriptions.removeAll()
         DispatchQueue.main.async { self.connectionStatus = .disconnected }
+        Log.log("WebSocket disconnected.", level: .info)
     }
     
     private func authenticate() {
@@ -49,15 +54,28 @@ class RealTimeService: ObservableObject {
     }
     
     func subscribe(to tickers: [String]) {
-        guard !tickers.isEmpty, connectionStatus == .connected else { return }
+        guard connectionStatus == .connected else { return }
+        
+        // Filter out tickers we are already subscribed to
+        let newTickers = tickers.filter { !activeSubscriptions.contains($0) }
+        guard !newTickers.isEmpty else { return }
+        
         // Subscribe to the "Q" (Quote) stream for NBBO updates
-        let subscriptionMessage = "{\"action\":\"subscribe\",\"params\":\"Q.\(tickers.joined(separator: ",Q." ))\"}"
+        let subscriptionMessage = "{\"action\":\"subscribe\",\"params\":\"\(newTickers.map { "Q." + $0 }.joined(separator: ","))\"}"
         sendMessage(subscriptionMessage)
+        
+        // Add to our set of active subscriptions
+        for ticker in newTickers {
+            activeSubscriptions.insert(ticker)
+        }
+        Log.log("Subscribed to: \(newTickers.joined(separator: ","))", level: .debug)
     }
     
     private func sendMessage(_ message: String) {
         webSocketTask?.send(.string(message)) { error in
-            if let error = error { print("WebSocket send error: \(error)") }
+            if let error = error {
+                Log.reportError(error, context: "WebSocket send error")
+            }
         }
     }
     
@@ -65,7 +83,7 @@ class RealTimeService: ObservableObject {
         webSocketTask?.receive { [weak self] result in
             switch result {
             case .failure(let error):
-                print("WebSocket error: \(error)")
+                Log.reportError(error, context: "WebSocket receive error")
                 DispatchQueue.main.async { self?.connectionStatus = .failed }
                 // Implement reconnection logic here
             case .success(let message):
@@ -90,7 +108,15 @@ class RealTimeService: ObservableObject {
                     if item["ev"] as? String == "status" {
                         let status = item["status"] as? String
                         if status == "auth_success" {
-                            DispatchQueue.main.async { self?.connectionStatus = .connected }
+                            DispatchQueue.main.async {
+                                self?.connectionStatus = .connected
+                            }
+                            Log.log("WebSocket connected and authenticated.", level: .info)
+                            // Re-subscribe to any tickers that were requested before connection
+                            self?.resubscribeToAll()
+                        } else if status == "auth_failed" {
+                             Log.log("WebSocket auth failed. Check Polygon token.", level: .error)
+                             DispatchQueue.main.async { self?.connectionStatus = .failed }
                         }
                     }
                     
@@ -107,7 +133,13 @@ class RealTimeService: ObservableObject {
                 }
             }
         } catch {
-            print("WebSocket JSON parsing error: \(error)")
+            Log.reportError(error, context: "WebSocket JSON parsing error")
         }
+    }
+    
+    private func resubscribeToAll() {
+        let allTickers = Array(activeSubscriptions)
+        activeSubscriptions.removeAll() // Clear to allow subscribe() to work
+        subscribe(to: allTickers)
     }
 }
