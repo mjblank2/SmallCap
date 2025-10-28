@@ -75,7 +75,7 @@ services:
 databases:
   - name: microcap-db
     region: oregon
-    plan: starter
+    plan: free
 
 # Shared Secrets Group (Configure values securely in the Render Dashboard)
 envVarGroups:
