@@ -1,14 +1,25 @@
-// iOS/Services/AuthService.swift (Excerpt)
+import Foundation
 import LocalAuthentication
 import Combine
 
 class AuthService: ObservableObject {
-    // ... (existing properties: isAuthenticated) ...
+    static let shared = AuthService()
+    
+    @Published var isAuthenticated: Bool = false
     @Published var isBiometricsEnabled: Bool = false
     @Published var isAppLocked: Bool = false // Manages the lock screen state
     
     private let biometricsKey = "biometricsEnabled"
+    private let authAccount = "authToken" // Keychain account key
 
+    private init() {
+        // Check keychain on init
+        if let token = KeychainHelper.shared.get(account: authAccount), !token.isEmpty {
+            self.isAuthenticated = true
+        }
+        initializeBiometrics()
+    }
+    
     // Call this in the init() function (after setting isAuthenticated)
     func initializeBiometrics() {
         self.isBiometricsEnabled = UserDefaults.standard.bool(forKey: biometricsKey)
@@ -21,7 +32,10 @@ class AuthService: ObservableObject {
     func setBiometricsEnabled(_ enabled: Bool) {
         UserDefaults.standard.set(enabled, forKey: biometricsKey)
         self.isBiometricsEnabled = enabled
-        self.isAppLocked = enabled && self.isAuthenticated
+        // If user is enabling it, lock the app
+        if enabled {
+            self.isAppLocked = self.isAuthenticated
+        }
         Haptics.impactLight()
     }
     
@@ -38,7 +52,7 @@ class AuthService: ObservableObject {
                     Haptics.notifySuccess()
                 }
             } catch {
-                print("Biometric Authentication Failed.")
+                Log.reportError(error, context: "Biometric auth failed")
             }
         }
     }
@@ -50,11 +64,45 @@ class AuthService: ObservableObject {
         }
     }
     
-    func logout() {
-        // ... (existing logout logic) ...
-        DispatchQueue.main.async { 
-            self.isAuthenticated = false
-            self.isAppLocked = false // Ensure app is unlocked on logout
+    // --- Authentication Flow ---
+    
+    func login(email: String) async -> Bool {
+        // --- SIMULATION ---
+        // In production: Call Firebase Auth, Sign in with Apple, etc.
+        // On success, get the JWT token from the auth provider.
+        let simUsers = ["user@example.com": "VALID_USER_TOKEN", "admin@example.com": "VALID_ADMIN_TOKEN"]
+        guard let token = simUsers[email] else {
+            return false // Simulated failed login
         }
+        // --- END SIMULATION ---
+
+        // Save token securely
+        KeychainHelper.shared.save(token: token, account: authAccount)
+        
+        // Update app state
+        DispatchQueue.main.async {
+            self.isAuthenticated = true
+            if self.isBiometricsEnabled {
+                self.isAppLocked = true // Lock on login if biometrics is on
+            }
+        }
+        
+        // Identify with other services
+        await SubscriptionManager.shared.identifyUser(userId: email) // Use real UID here
+        Analytics.track(.loginSuccess, properties: ["email": email])
+        return true
+    }
+    
+    @MainActor
+    func logout() {
+        // Clear token
+        KeychainHelper.shared.delete(account: authAccount)
+        
+        // Clear app state
+        self.isAuthenticated = false
+        self.isAppLocked = false // Ensure app is unlocked on logout
+        
+        // Log out of services
+        Task { await SubscriptionManager.shared.logoutUser() }
     }
 }
