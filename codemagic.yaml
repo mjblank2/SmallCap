@@ -68,7 +68,8 @@ workflows:
       - build/ios/ipa/*.ipa
       # Collect the generated screenshots
       - ios/fastlane/screenshots/**/*.png
-      publishing:
+
+    publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRI
         key_id: $ASC_KEY_ID
