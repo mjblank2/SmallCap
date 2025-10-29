@@ -74,6 +74,5 @@ workflows:
         key_id: $ASC_KEY_ID
         issuer_id: $ASC_ISSUER_ID
         submit_to_testflight: true
-        upload_screenshots: true
     
 
