@@ -26,7 +26,7 @@ workflows:
         - pattern: 'main'
           include: true
 
-    scripts:
+      scripts:
       # --- Setup and Signing ---
       - name: Initialize Keychain
         script: keychain initialize
@@ -72,7 +72,7 @@ workflows:
         publishing:
       app_store_connect:
         api_key: $APP_STORE_CONNECT_PRI
-        key_id: $ASC_KEY_ID
+            key_id: $ASC_KEY_ID
         issuer_id: $ASC_ISSUER_ID
         submit_to_testflight: true
         submit_screenshots: true
