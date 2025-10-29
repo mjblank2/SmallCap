@@ -7,8 +7,9 @@ workflows:
       # CRITICAL: Configure these securely in the Codemagic Dashboard Environment Groups.
       groups:
         - app_store_connect
-        - certificates
         - general # Ensure BUNDLE_ID is set here
+      # Signing assets are fetched dynamically via the App Store Connect API,
+      # so no additional "certificates" variable group is required.
       vars:
         # Update these to match your actual Xcode project names
         XCODE_WORKSPACE: "ios/MicroCapDaily.xcworkspace"
