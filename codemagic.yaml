@@ -69,10 +69,13 @@ workflows:
       # Collect the generated screenshots
       - ios/fastlane/screenshots/**/*.png
       
-    publishing:
+        publishing:
       app_store_connect:
-    api_key: $APP_STORE_CONNECT_PRI
-    key_id: $ASC_KEY_ID
-    issuer_id: $ASC_ISSUER_ID
-              submit_to_testflight: true
-                submit_screenshots: true
+        api_key: $APP_STORE_CONNECT_PRI
+        key_id: $ASC_KEY_ID
+        issuer_id: $ASC_ISSUER_ID
+        submit_to_testflight: true
+        submit_screenshots: true
+
+    
+
