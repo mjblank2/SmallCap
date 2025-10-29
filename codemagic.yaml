@@ -15,8 +15,8 @@ workflows:
         XCODE_WORKSPACE: "ios/MicroCapDaily.xcworkspace"
         XCODE_SCHEME: "MicroCapDaily"
         UITEST_SCHEME: "MicroCapDailyUITests"
-      # Specify Ruby version for Fastlane stability
-      ruby: 3.1.2
+      # Specify a supported Ruby version for Fastlane stability
+      ruby: 3.2.4
       xcode: latest
 
     triggering:
