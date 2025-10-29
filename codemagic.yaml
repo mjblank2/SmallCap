@@ -31,6 +31,42 @@ workflows:
       - name: Initialize Keychain
         script: keychain initialize
 
+      - name: Normalize App Store Connect private key
+        script: |
+          python3 <<'PY'
+import base64
+import os
+import pathlib
+import sys
+
+cm_env = pathlib.Path(os.environ["CM_ENV"])
+build_dir = pathlib.Path(os.environ.get("CM_BUILD_DIR", "."))
+raw_key = os.environ.get("APP_STORE_CONNECT_PRIVATE_KEY") or os.environ.get("APP_STORE_CONNECT_PRI")
+
+if not raw_key:
+    sys.stderr.write("Missing App Store Connect private key. Ensure APP_STORE_CONNECT_PRIVATE_KEY is set.\n")
+    sys.exit(1)
+
+try:
+    decoded = base64.b64decode(raw_key)
+    if b"-----BEGIN" in decoded:
+        key_text = decoded.decode("utf-8")
+    else:
+        raise ValueError
+except Exception:
+    key_text = raw_key
+
+key_path = build_dir / "tmp" / "app_store_connect_key.p8"
+key_path.parent.mkdir(parents=True, exist_ok=True)
+key_path.write_text(key_text)
+
+with cm_env.open("a") as env_file:
+    env_file.write(f"export APP_STORE_CONNECT_PRIVATE_KEY_PATH={key_path}\n")
+    env_file.write("export APP_STORE_CONNECT_PRIVATE_KEY<<'EOF'\n")
+    env_file.write(key_text)
+    env_file.write("\nEOF\n")
+PY
+
       - name: Fetch signing files
         script: |
           app-store-connect fetch-signing-files $BUNDLE_ID --type IOS_APP_STORE --create
@@ -71,7 +107,7 @@ workflows:
 
     publishing:
       app_store_connect:
-        api_key: $APP_STORE_CONNECT_PRI
+        api_key: $APP_STORE_CONNECT_PRIVATE_KEY
         key_id: $ASC_KEY_ID
         issuer_id: $ASC_ISSUER_ID
         submit_to_testflight: true
