@@ -77,12 +77,29 @@ workflows:
 
       - name: Fetch signing files
         script: |
-          app-store-connect fetch-signing-files $BUNDLE_ID \
+          #!/usr/bin/env bash
+          set -euo pipefail
+
+          help_output="$(app-store-connect fetch-signing-files --help 2>&1 || true)"
+
+          if grep -q -- '--private-key-path' <<<"$help_output"; then
+            key_flag=(--private-key-path "$APP_STORE_CONNECT_PRIVATE_KEY_PATH")
+          elif grep -q -- '--private-key-file' <<<"$help_output"; then
+            key_flag=(--private-key-file "$APP_STORE_CONNECT_PRIVATE_KEY_PATH")
+          elif grep -q -- '--private-key' <<<"$help_output"; then
+            key_flag=(--private-key "$APP_STORE_CONNECT_PRIVATE_KEY")
+          else
+            echo "Failed to detect supported private key flag from app-store-connect CLI" >&2
+            echo "$help_output" >&2
+            exit 1
+          fi
+
+          app-store-connect fetch-signing-files "$BUNDLE_ID" \
             --type IOS_APP_STORE \
             --create \
             --key-id "$ASC_KEY_ID" \
             --issuer-id "$ASC_ISSUER_ID" \
-            --private-key-path "$APP_STORE_CONNECT_PRIVATE_KEY_PATH"
+            "${key_flag[@]}"
 
       - name: Add certificates to Keychain
         script: keychain add-certificates
