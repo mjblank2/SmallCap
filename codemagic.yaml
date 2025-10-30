@@ -56,6 +56,14 @@ workflows:
           except Exception:
               key_text = raw_key
 
+          # Replace literal '\n' sequences that are commonly used when storing
+          # the key in environment variables. Without this normalization the
+          # resulting file would contain the two-character sequence '\\n',
+          # which is not a valid PEM-encoded key and causes Codemagic's
+          # `app-store-connect` CLI to fail with:
+          #   "Provided value is not a valid PEM encoded private key".
+          key_text = key_text.replace("\\n", "\n").strip()
+
           key_path = build_dir / "tmp" / "app_store_connect_key.p8"
           key_path.parent.mkdir(parents=True, exist_ok=True)
           key_path.write_text(key_text)
